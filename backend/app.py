@@ -22,7 +22,7 @@ def handle_audio(ws):
             break
         
         # 초기 버전에서는 단순히 메시지 반환
-        ws.send("음성 인식 결과가 여기에 표시됩니다.")
+        ws.send("음성 인식 결과가 여기에 표시됩니다...")
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=3000, debug=True)
