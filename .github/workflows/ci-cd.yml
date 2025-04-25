@@ -18,6 +18,14 @@ jobs:
       with:
         node-version: '16'
         
+    - name: Cache Node.js modules
+      uses: actions/cache@v2
+      with:
+        path: ~/.npm
+        key: ${{ runner.OS }}-node-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.OS }}-node-
+          
     - name: Install React dependencies
       working-directory: ./frontend
       run: npm install
@@ -35,6 +43,14 @@ jobs:
       with:
         python-version: '3.9'
         
+    - name: Cache pip packages
+      uses: actions/cache@v2
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+          
     - name: Install Python dependencies
       working-directory: ./backend
       run: |
@@ -46,30 +62,36 @@ jobs:
       run: |
         if [ -d tests ]; then python -m unittest discover tests; fi
     
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: build-files
+        path: frontend/build/
+    
   deploy:
     needs: build-and-test
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
     
     steps:
     - uses: actions/checkout@v2
     
-    - name: Set up Node.js
-      uses: actions/setup-node@v2
+    - name: Download build artifacts
+      uses: actions/download-artifact@v2
       with:
-        node-version: '16'
-        
-    - name: Install React dependencies
-      working-directory: ./frontend
-      run: npm install
-    
-    - name: Build React app
-      working-directory: ./frontend
-      run: npm run build
+        name: build-files
+        path: frontend/build/
     
     - name: Copy build files to backend static folder
       run: |
         mkdir -p backend/www
         cp -r frontend/build/* backend/www/
     
-    # 실제 배포는 아직 없으므로, 여기서는 빌드된 파일만 백엔드로 복사
+    - name: Create deployment summary
+      run: |
+        echo "## 배포 완료!" >> $GITHUB_STEP_SUMMARY
+        echo "- 브랜치: ${GITHUB_REF#refs/heads/}" >> $GITHUB_STEP_SUMMARY
+        echo "- 커밋: $GITHUB_SHA" >> $GITHUB_STEP_SUMMARY
+        echo "- 배포 시간: $(date)" >> $GITHUB_STEP_SUMMARY
+        
+    # 실제 배포는 여전히 별도의 배포 시스템 필요
